@@ -19,12 +19,14 @@ if ($link) {
     $numero = $link['numero'];
     $mensaje = $link['mensaje'] ?? '';
 
-    // Registrar clic
+    // Captura de datos
     $ip = $_SERVER['REMOTE_ADDR'];
     $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido';
+    $referer = $_SERVER['HTTP_REFERER'] ?? 'Directo';
 
-    $stmt = $pdo->prepare("INSERT INTO clicks (link_id, ip, user_agent) VALUES (?, ?, ?)");
-    $stmt->execute([$link_id, $ip, $user_agent]);
+    // Registrar clic con referer
+    $stmt = $pdo->prepare("INSERT INTO clicks (link_id, ip, user_agent, referer) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$link_id, $ip, $user_agent, $referer]);
 
     // Redireccionar
     $urlFinal = "https://wa.me/$numero";
@@ -38,3 +40,4 @@ if ($link) {
     http_response_code(404);
     echo "Enlace no encontrado.";
 }
+

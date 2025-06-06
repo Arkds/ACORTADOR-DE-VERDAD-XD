@@ -68,7 +68,12 @@ if (!isset($_SESSION['user_id'])) {
                     <li class="nav-item"><a class="nav-link" href="mis_enlaces.php">Mis Enlaces</a></li>
                     <li class="nav-item"><a class="nav-link" href="reportes.php">Reportes</a></li>
 
+                    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+
+                        <li class="nav-item"><a class="nav-link" href="usuarios.php">Usuarios</a></li>
+                    <?php endif; ?>
                 </ul>
+
 
                 <a href="ayuda.php" class="btn btn-outline-light me-2">
                     <i class="bi bi-question-circle"></i>

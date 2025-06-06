@@ -27,7 +27,7 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
 
     if ($selected_link === 'all') {
         $stmt = $pdo->prepare("
-        SELECT c.fecha_click, c.user_agent, l.alias
+        SELECT c.fecha_click, c.user_agent, c.referer, l.alias
         FROM clicks c
         JOIN links l ON c.link_id = l.id
         WHERE l.creado_por = ?
@@ -35,8 +35,9 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
     ");
         $stmt->execute([$_SESSION['user_id'], $start_datetime, $end_datetime]);
     } else {
+
         $stmt = $pdo->prepare("
-        SELECT fecha_click, user_agent
+        SELECT fecha_click, user_agent, referer
         FROM clicks
         WHERE link_id = ?
         AND fecha_click BETWEEN ? AND ?
@@ -48,13 +49,20 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
     $devices_por_alias = [];
     $platforms_por_alias = [];
     $browsers_por_alias = [];
+    $referers_por_alias = [];
+
+    // Función para contar (mover aquí antes de usarla)
+    function contar_grupo($array)
+    {
+        return array_count_values($array);
+    }
 
     foreach ($clicks as $click) {
         $fecha = date("Y-m-d", strtotime($click['fecha_click']));
         $clicks_por_dia[$fecha] = ($clicks_por_dia[$fecha] ?? 0) + 1;
 
         $agent = strtolower($click['user_agent']);
-        $alias = $click['alias'] ?? 'este'; // Solo existe si se eligió "all"
+        $alias = $click['alias'] ?? 'link seleccionado';
 
         $device = (strpos($agent, 'mobile') !== false || strpos($agent, 'android') !== false) ? 'Móvil' : 'Escritorio';
         $platform = (strpos($agent, 'windows') !== false) ? 'Windows' :
@@ -66,21 +74,19 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
                 ((strpos($agent, 'safari') !== false) ? 'Safari' :
                     ((strpos($agent, 'edge') !== false) ? 'Edge' : 'Otro')));
 
+        $referer = $click['referer'] ?? 'Desconocido';
+
         $devices_por_alias[$alias][] = $device;
         $platforms_por_alias[$alias][] = $platform;
         $browsers_por_alias[$alias][] = $browser;
-    }
-
-    // Función para contar
-    function contar_grupo($array)
-    {
-        return array_count_values($array);
+        $referers_por_alias[$alias][] = $referer;
     }
 
     // Agrupar
     $device_data = [];
     $platform_data = [];
     $browser_data = [];
+    $referer_data = []; // <- Asegúrate de incluir esta línea
 
     foreach ($devices_por_alias as $alias => $arr) {
         $device_data[$alias] = contar_grupo($arr);
@@ -91,11 +97,15 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
     foreach ($browsers_por_alias as $alias => $arr) {
         $browser_data[$alias] = contar_grupo($arr);
     }
+    foreach ($referers_por_alias as $alias => $arr) {
+        $referer_data[$alias] = contar_grupo($arr);
+    }
+
+
+    // Función para contar
 
 
 
-
-   
 }
 
 ?>
@@ -163,8 +173,10 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
                         <canvas id="chartCanvas" height="200"></canvas>
                     </div>
                     <div class="tab-pane fade" id="referer">
-                        <h5>Referers (por ahora no disponible)</h5>
+                        <h5>Resumen por origen de tráfico (Referer)</h5>
+                        <div id="refererData"></div>
                     </div>
+
                     <div class="tab-pane fade" id="device">
                         <h5>Resumen por tipo de dispositivo</h5>
                         <div id="deviceData"></div>
@@ -250,6 +262,9 @@ if ($default_start && $default_end && ($selected_link || $selected_link === 'all
     const deviceData = <?= json_encode($device_data ?? []) ?>;
     const platformData = <?= json_encode($platform_data ?? []) ?>;
     const browserData = <?= json_encode($browser_data ?? []) ?>;
+    const refererData = <?= json_encode($referer_data ?? []) ?>;
+    generarTablaResumen("refererData", refererData);
+
 
     generarTablaResumen("deviceData", deviceData);
     generarTablaResumen("platformData", platformData);
